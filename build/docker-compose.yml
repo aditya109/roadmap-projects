@@ -1,0 +1,57 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      JENKINS_OPTS: --prefix=/jenkins
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cicd
+
+  argocd-server:
+    image: argoproj/argocd:latest
+    container_name: argocd-server
+    command: [ "argocd-server", "--insecure" ]
+    ports:
+      - "8081:8080"
+    environment:
+      - ARGOCD_SERVER_INSECURE=true
+    depends_on:
+      - argocd-redis
+      - argocd-repo-server
+      - argocd-dex-server
+    networks:
+      - cicd
+
+  argocd-redis:
+    image: redis:6.2
+    container_name: argocd-redis
+    command: ["redis-server", "--port", "6379"]
+    networks:
+      - cicd
+
+  argocd-repo-server:
+    image: argoproj/argocd:v2.4.3
+    container_name: argocd-repo-server
+    command: ["argocd-repo-server"]
+    networks:
+      - cicd
+
+  argocd-dex-server:
+    image: argoproj/argocd:v2.4.3
+    container_name: argocd-dex-server
+    command: ["argocd-dex", "serve", "/shared/dex/config.yaml"]
+    networks:
+      - cicd
+
+volumes:
+  jenkins_home:
+
+networks:
+  cicd:
+    driver: bridge
